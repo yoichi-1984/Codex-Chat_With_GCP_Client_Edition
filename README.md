@@ -39,7 +39,7 @@ CLIラッパー (`main_runner.py`) は `streamlit run main.py` を自動で呼�
  │ 　　├── utils.py # ヘルパー関数群  
  │ 　　├── config.py # 定数・テキスト定義  
  │ 　　├── config.yaml # テキスト情報  
- │ 　　├── sidebar.py # サイドバー機能管理
+ │ 　　├── sidebar.py # サイドバー機能管理  
  │ 　　└── prompts.yaml # プロンプト定義  
  ├── .gitignore  
  ├── LICENSE  
