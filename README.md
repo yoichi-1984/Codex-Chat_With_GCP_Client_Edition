@@ -75,14 +75,30 @@ python -m build
 install.batを実行
 
 ---  
-## 環境設定  
+## 環境設定-1  
   
-プロジェクトルートに env/ ディレクトリを作成し、.env ファイルを配置してください。  
+google cloudにアクセスし、画面左上部からプロジェクト選択ボタン押し、  
+該当のプロジェクトID（最右列）をメモ(後述のGCP_PROJECT_ID)。  
+Google Cloud コンソールのメニューから「API とサービス」>「ライブラリ」を選択。  
+検索バーから"vertex ai api"を検索し、開き、有効にする。  
+コンソールのナビゲーションメニューから「IAM と管理」>「サービス アカウント」に移動し、  
+上部の「＋サービス アカウントを作成」をクリックし、  
+サービスアカウント名（例: gemini-3-pro-runner）を入力し、「作成して続行」をクリックする。  
+「このサービス アカウントにプロジェクトへのアクセス権を付与する」セクションで、  
+ロールから、「Vertex AI ユーザー」を選択。  
+最後のステップは省略可能なので、そのまま「完了」。  
+作成したサービスアカウントのメールアドレスをクリックして詳細画面を開き、  
+「キー」タブを選択し、「鍵を追加」>「新しい鍵を作成」の順にクリック。  
+キーのタイプとして「JSON」を選択し、「作成」をクリックしてダウンロードし、  
+ローカルの所定の場所に保管。  
   
-GCP_PROJECT_ID="gen-lang-client-xxxxx"
-GCP_LOCATION="global"
-GEMINI_MODEL_ID="gemini-3-pro-preview"
-GOOGLE_APPLICATION_CREDENTIALS="C:/xxxxx/gen-lang-client-xxxx-xxxx.json"
+プロジェクトルートに env/ ディレクトリを作成し、.env ファイルを配置。  
+"GOOGLE_APPLICATION_CREDENTIALS"には、前述したjsonファイルのアドレスを記述。  
+
+GCP_PROJECT_ID="gen-lang-client-xxxxx"  
+GCP_LOCATION="global"  
+GEMINI_MODEL_ID="gemini-3-pro-preview"  
+GOOGLE_APPLICATION_CREDENTIALS="C:/xxxxx/gen-lang-client-xxxx-xxxx.json"  
   
 ---  
 ## 使い方    
@@ -90,7 +106,7 @@ GOOGLE_APPLICATION_CREDENTIALS="C:/xxxxx/gen-lang-client-xxxx-xxxx.json"
 pyproject.tomlに従ってインストール。  
 pip install -e .  
 その後は  
-仮想環境で「codex-chat」と打ち込めば、内部的にstreamlit run で main_runner.py が実行される。  
+仮想環境で「codex-chat-gcp」と打ち込めば、内部的にstreamlit run で main_runner.py が実行される。  
   
 他には  
 python -m src.codex_chat_gcp.main_runner  
