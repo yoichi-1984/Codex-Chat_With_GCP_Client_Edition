@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "codex-chat-gcp"
+version = "0.1.0"
+description = "Codex-chat with Google GenAI SDK (Gemini 3)"
+authors = [
+{ name = "yoichi-1984", email = "yoichi.1984.engineer@gmail.com" },
+]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+"streamlit",
+"google-genai",          # 最新の推奨SDK
+"python-dotenv",
+"streamlit-ace",
+"build",
+"pylint",
+"pyyaml"
+]
+
+[project.scripts]
+codex-chat-gcp = "codex_chat_gcp.main_runner:run"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+codex_chat_gcp = ["*.yaml"]
