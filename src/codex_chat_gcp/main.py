@@ -161,22 +161,36 @@ def run_chatbot_app():
             full_thought = ""
             usage_metadata = None 
             
+            # --- 修正: 特殊生成モード（Pylint検証等）か通常モードかの判定 ---
+            is_special_mode = 'special_generation_messages' in st.session_state and st.session_state['special_generation_messages']
+            
+            # リクエストに使用するメッセージリストを決定
+            target_messages = []
+            if is_special_mode:
+                target_messages = st.session_state['special_generation_messages']
+                add_debug_log("Generating response for SPECIAL validation request.")
+            else:
+                target_messages = st.session_state['messages']
+
             chat_contents = []
             system_instruction = ""
-            for m in st.session_state['messages']:
+            for m in target_messages:
                 if m["role"] == "system":
                     system_instruction = m["content"]
                 else:
                     chat_contents.append(types.Content(role=m["role"], parts=[types.Part.from_text(text=m["content"])]))
 
             # Canvasコンテキストの挿入
-            context_parts = []
-            for i, code in enumerate(st.session_state['python_canvases']):
-                if code.strip() and code != config.ACE_EDITOR_DEFAULT_CODE:
-                    context_parts.append(types.Part.from_text(text=f"\n[Canvas-{i+1}]\n```python\n{code}\n```"))
-            
-            if context_parts and chat_contents:
-                chat_contents[-1].parts = context_parts + chat_contents[-1].parts
+            # ※ 通常モードの時のみ、現在のCanvasの内容を添付する。
+            # ※ 検証モード（is_special_mode）の場合、utils.py側で既にコードがプロンプトに含まれているためスキップする。
+            if not is_special_mode:
+                context_parts = []
+                for i, code in enumerate(st.session_state['python_canvases']):
+                    if code.strip() and code != config.ACE_EDITOR_DEFAULT_CODE:
+                        context_parts.append(types.Part.from_text(text=f"\n[Canvas-{i+1}]\n```python\n{code}\n```"))
+                
+                if context_parts and chat_contents:
+                    chat_contents[-1].parts = context_parts + chat_contents[-1].parts
 
             effort = st.session_state.get('reasoning_effort', 'high')
             t_level = types.ThinkingLevel.HIGH if effort == 'high' else types.ThinkingLevel.LOW
@@ -227,7 +241,23 @@ def run_chatbot_app():
                 if current_usage:
                     assistant_msg["usage"] = current_usage
                 
-                st.session_state['messages'].append(assistant_msg)
+                # --- 修正: 履歴への保存処理 ---
+                if is_special_mode:
+                    # 検証モードの場合:
+                    # 1. リクエストに使ったユーザーメッセージ（Pylintレポート等）をメイン履歴に追加
+                    for m in target_messages:
+                        if m["role"] == "user":
+                            st.session_state['messages'].append(m)
+                    
+                    # 2. アシスタントの回答を追加
+                    st.session_state['messages'].append(assistant_msg)
+                    
+                    # 3. 特殊モード用の一時メッセージをクリア
+                    del st.session_state['special_generation_messages']
+                    add_debug_log("Special validation messages merged to history.")
+                else:
+                    # 通常モードの場合: アシスタントの回答のみ追加（ユーザー発言は既に追加済み）
+                    st.session_state['messages'].append(assistant_msg)
 
             except Exception as e:
                 st.error(f"Error during generation: {e}")

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "codex-chat-gcp"
-version = "0.1.0"
+version = "0.1.1"
 description = "Codex-chat with Google GenAI SDK (Gemini 3)"
 authors = [
 { name = "yoichi-1984", email = "yoichi.1984.engineer@gmail.com" },
