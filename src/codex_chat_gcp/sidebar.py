@@ -13,7 +13,7 @@ def render_sidebar(supported_types, env_files, load_history, handle_clear, handl
         def on_env_change():
             # Reset conversation but keep settings
             for key, value in config.SESSION_STATE_DEFAULTS.items():
-                if key in ['reasoning_effort', 'canvas_key_counter', 'current_model_id']:
+                if key in ['reasoning_effort', 'canvas_key_counter', 'current_model_id', 'enable_google_search']:
                     continue
                 st.session_state[key] = value.copy() if isinstance(value, (dict, list)) else value
             st.session_state['canvas_key_counter'] += 1
@@ -40,6 +40,13 @@ def render_sidebar(supported_types, env_files, load_history, handle_clear, handl
             options=['high', 'low'],
             key='reasoning_effort',
             help="high: Maximum reasoning depth. low: Faster response."
+        )
+
+        # Web検索 (Grounding) チェックボックス
+        st.checkbox(
+            label=config.UITexts.WEB_SEARCH_LABEL,
+            key='enable_google_search',
+            help=config.UITexts.WEB_SEARCH_HELP
         )
 
         def handle_full_reset():

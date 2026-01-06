@@ -29,7 +29,8 @@ SESSION_STATE_DEFAULTS = {
     "canvas_key_counter": 0,
     "reasoning_effort": "high",
     "debug_logs": [],
-    "current_model_id": "gemini-3-pro-preview" # UIで切り替え可能にする
+    "current_model_id": "gemini-3-pro-preview", # UIで切り替え可能にする
+    "enable_google_search": False # Grounding機能用フラグ
 }
 
 # 選択可能なモデルリスト
@@ -81,3 +82,6 @@ class UITexts:
     
     REVIEW_PROMPT_SINGLE = "### Reference Code (Canvas)\nPlease review this code and suggest improvements."
     REVIEW_PROMPT_MULTI = "### Reference Code (Canvas-{i})\nPlease review this canvas and suggest improvements."
+    
+    WEB_SEARCH_LABEL = "Web検索 (Grounding)"
+    WEB_SEARCH_HELP = "Google検索を使用して回答を生成します。"

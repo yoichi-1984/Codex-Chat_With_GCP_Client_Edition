@@ -129,6 +129,12 @@ def run_chatbot_app():
         if msg["role"] != "system":
             with st.chat_message(msg["role"]):
                 st.markdown(msg["content"])
+                
+                # Groundingソースの表示（履歴にある場合）
+                if "grounding_metadata" in msg and msg["grounding_metadata"]:
+                    with st.expander("🔎 検索ソース (Grounding)"):
+                        st.json(msg["grounding_metadata"])
+
                 # トークン使用量の詳細表示
                 if msg["role"] == "assistant" and "usage" in msg:
                     u = msg["usage"]
@@ -160,8 +166,9 @@ def run_chatbot_app():
             full_response = ""
             full_thought = ""
             usage_metadata = None 
+            grounding_chunks = []
             
-            # --- 修正: 特殊生成モード（Pylint検証等）か通常モードかの判定 ---
+            # --- 特殊生成モード（Pylint検証等）か通常モードかの判定 ---
             is_special_mode = 'special_generation_messages' in st.session_state and st.session_state['special_generation_messages']
             
             # リクエストに使用するメッセージリストを決定
@@ -181,8 +188,6 @@ def run_chatbot_app():
                     chat_contents.append(types.Content(role=m["role"], parts=[types.Part.from_text(text=m["content"])]))
 
             # Canvasコンテキストの挿入
-            # ※ 通常モードの時のみ、現在のCanvasの内容を添付する。
-            # ※ 検証モード（is_special_mode）の場合、utils.py側で既にコードがプロンプトに含まれているためスキップする。
             if not is_special_mode:
                 context_parts = []
                 for i, code in enumerate(st.session_state['python_canvases']):
@@ -195,12 +200,19 @@ def run_chatbot_app():
             effort = st.session_state.get('reasoning_effort', 'high')
             t_level = types.ThinkingLevel.HIGH if effort == 'high' else types.ThinkingLevel.LOW
 
+            # --- Tool設定 (Google Search) ---
+            tools_config = []
+            if st.session_state.get('enable_google_search', False) and not is_special_mode:
+                add_debug_log("Google Search Tool Enabled.")
+                tools_config = [types.Tool(google_search=types.GoogleSearch())]
+
             try:
                 add_debug_log(f"Requesting stream: {model_id} via {location} (max_output={max_tokens_val})")
                 
                 gen_config = types.GenerateContentConfig(
                     system_instruction=system_instruction,
-                    max_output_tokens=max_tokens_val
+                    max_output_tokens=max_tokens_val,
+                    tools=tools_config
                 )
                 if "gemini-3" in model_id:
                     gen_config.thinking_config = types.ThinkingConfig(thinking_level=t_level)
@@ -216,6 +228,11 @@ def run_chatbot_app():
                         usage_metadata = chunk.usage_metadata
                     
                     if not chunk.candidates: continue
+                    
+                    # Grounding Metadataの収集
+                    if chunk.candidates[0].grounding_metadata:
+                        grounding_chunks.append(chunk.candidates[0].grounding_metadata)
+
                     for part in chunk.candidates[0].content.parts:
                         if part.thought:
                             full_thought += part.text
@@ -225,6 +242,32 @@ def run_chatbot_app():
                             text_placeholder.markdown(full_response + "▌")
                 
                 text_placeholder.markdown(full_response)
+                
+                # Grounding情報の統合と表示
+                final_grounding_metadata = None
+                if grounding_chunks:
+                    # 最後のチャンクや集約した情報を使用（簡易的に最後のものを採用）
+                    # 実際のGrounding MetadataはWebSearchQueryやSourceなどが含まれる
+                    last_meta = grounding_chunks[-1]
+                    
+                    # シリアライズ可能な形式に変換
+                    final_grounding_metadata = {}
+                    if last_meta.grounding_chunks:
+                         # 検索結果（Source）の抽出
+                        sources = []
+                        for gc in last_meta.grounding_chunks:
+                            if gc.web:
+                                sources.append({"title": gc.web.title, "uri": gc.web.uri})
+                        if sources:
+                            final_grounding_metadata["sources"] = sources
+                            
+                    if last_meta.web_search_queries:
+                        final_grounding_metadata["queries"] = last_meta.web_search_queries
+                    
+                    if final_grounding_metadata:
+                        with st.expander("🔎 検索ソース (Grounding)"):
+                            st.json(final_grounding_metadata)
+
                 add_debug_log("Stream successfully finished.")
 
                 current_usage = None
@@ -240,23 +283,19 @@ def run_chatbot_app():
                 assistant_msg = {"role": "assistant", "content": full_response}
                 if current_usage:
                     assistant_msg["usage"] = current_usage
+                if final_grounding_metadata:
+                    assistant_msg["grounding_metadata"] = final_grounding_metadata
                 
-                # --- 修正: 履歴への保存処理 ---
+                # --- 履歴への保存処理 ---
                 if is_special_mode:
-                    # 検証モードの場合:
-                    # 1. リクエストに使ったユーザーメッセージ（Pylintレポート等）をメイン履歴に追加
                     for m in target_messages:
                         if m["role"] == "user":
                             st.session_state['messages'].append(m)
                     
-                    # 2. アシスタントの回答を追加
                     st.session_state['messages'].append(assistant_msg)
-                    
-                    # 3. 特殊モード用の一時メッセージをクリア
                     del st.session_state['special_generation_messages']
                     add_debug_log("Special validation messages merged to history.")
                 else:
-                    # 通常モードの場合: アシスタントの回答のみ追加（ユーザー発言は既に追加済み）
                     st.session_state['messages'].append(assistant_msg)
 
             except Exception as e:
